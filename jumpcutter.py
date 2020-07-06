@@ -31,23 +31,24 @@ def createPath(s):
     try:  
         os.mkdir('TMP')
     except OSError:
-        a = input('Vuoi cancellare la cartella TMP? [y | N]')
+        a = input('Do you want to delete the TMP folder? [y/N]')
         if a == 'y':
             subprocess.call('rm -rf TMP', shell=True)
+            os.mkdir('TMP')
             return 
         assert False, "Creation of the directory %s failed. (The TEMP folder may already exist. Delete or rename it, and try again.)"
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-i', type=str,  help="Input file")
-parser.add_argument('-o', type=str, default="", help="Output file")
-parser.add_argument('--st', type=float, default=0.04, help="La soglia che distingue l'audio 'silenziato' da quello effetivo")
-parser.add_argument('--sound', type=float, default=1.15, help="the speed that sounded (spoken) frames should be played at. Typically 1.")
-parser.add_argument('--silent', type=float, default=6.00, help="the speed that silent frames should be played at. 999999 for jumpcutting.")
-parser.add_argument('--fm', type=float, default=1, help="Qualche frame 'silenzioso' per sistemare i frame 'suonanti' così da non perdere il contesto del video")
+parser.add_argument('-i', type=str,  help="the input file")
+parser.add_argument('-o', type=str, default="", help="the output file")
+parser.add_argument('--st', type=float, default=0.04, help="the volume amount that frames' audio needs to surpass to be consider \"sounded\"")
+parser.add_argument('--sound', type=float, default=1.15, help="the speed that sounded (spoken) frames should be played at.")
+parser.add_argument('--silent', type=float, default=6.00, help="the speed that silent frames should be played at")
+parser.add_argument('--fm', type=float, default=1, help="some silent frames adjacent to sounded frames are included to provide context")
 parser.add_argument('--sr', type=float, default=32000, help="sample rate of the input and output videos")
-parser.add_argument('-r', type=float, default=30, help="frame rate of the input and output videos. optional... I try to find it out myself, but it doesn't always work.")
-parser.add_argument('-q', type=int, default=5, help="quality of frames to be extracted from input video. 1 is highest, 31 is lowest, 3 is the default.")
+parser.add_argument('-r', type=float, default=30, help="frame rate of the input and output videos.")
+parser.add_argument('-q', type=int, default=4, help="quality of frames to be extracted from input video.")
 
 createPath('TMP')
 
@@ -61,7 +62,7 @@ NEW_SPEED = [args.silent, args.sound]
 INPUT_FILE = args.i
 FRAME_QUALITY = args.q
 
-assert INPUT_FILE != None , "Cosa dovrei fare ?!"
+assert INPUT_FILE != None , "What am I supposed to do ?!"
 
 OUTPUT_FILE = args.o if len(args.o) >= 1 else inputToOutputFilename(INPUT_FILE)
 
