@@ -46,7 +46,7 @@ parser.add_argument('--st', type=float, default=0.04, help="the volume amount th
 parser.add_argument('--sound', type=float, default=1.15, help="the speed that sounded (spoken) frames should be played at.")
 parser.add_argument('--silent', type=float, default=6.00, help="the speed that silent frames should be played at")
 parser.add_argument('--fm', type=float, default=1, help="some silent frames adjacent to sounded frames are included to provide context")
-parser.add_argument('--sr', type=float, default=41000, help="sample rate of the input and output videos")
+parser.add_argument('--sr', type=float, default=44100, help="sample rate of the input and output videos")
 parser.add_argument('-r', type=float, default=30, help="frame rate of the input and output videos.")
 parser.add_argument('-q', type=int, default=4, help="quality of frames to be extracted from input video.")
 
@@ -149,10 +149,18 @@ for chunk in chunks:
     outputPointer = endPointer
 fileFrame.close()
 
-wavfile.write('TMP/audioNew.wav', SAMPLE_RATE, outputAudioData)
+try:
+    wavfile.write('TMP/audioNew.wav', SAMPLE_RATE, outputAudioData)
+except:
+    try:
+        wavfile.write('TMP/audioNew.wav', 44056, outputAudioData)
+    except:
+        try:
+            wavfile.write('TMP/audioNew.wav', 37800, outputAudioData)
+        except:
+            wavfile.write('TMP/audioNew.wav', 32000 , outputAudioData)
 
 command = "ffmpeg -r {} -f concat -safe 0 -i fileFrame.txt -i TMP/audioNew.wav -r {} '{}'".format(frameRate, frameRate, OUTPUT_FILE)
-#command = "ffmpeg -r {} -f concat -safe 0 -i fileFrame.txt -i TMP/audioNew.wav -r {} '{}'".format(frameRate, frameRate, OUTPUT_FILE)
 subprocess.call(command, shell=True)
 
 deletePath()
