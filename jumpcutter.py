@@ -11,11 +11,11 @@ from scipy.io import wavfile
 def getMaxVolume(s):
     return max(float(np.max(s)), -float(np.min(s)))
 
-def copyFrame(inputFrame, outputFrame, list):
+def copyFrame(inputFrame, outputFrame, fileName):
     src = "TMP/{}.jpg".format(inputFrame + 1)
     if not os.path.isfile(src):
         return False
-    list.append("file '{}'\n".format(src))
+    fileName.write("file '{}'\n".format(src))
     if outputFrame%500 == 499:
         print(str(outputFrame + 1) + " time-altered frames saved.")
     return True
@@ -49,6 +49,7 @@ parser.add_argument('--fm', type=float, default=1, help="some silent frames adja
 parser.add_argument('--sr', type=float, default=44100, help="sample rate of the input and output videos")
 parser.add_argument('-r', type=float, default=30, help="frame rate of the input and output videos.")
 parser.add_argument('-q', type=int, default=4, help="quality of frames to be extracted from input video.")
+parser.add_argument('--hwaccel', type=str, default="", help="choose what hardware acceleration use for ffmpeg.")
 
 createPath('TMP')
 
@@ -61,6 +62,7 @@ FRAME_SPREADAGE = args.fm
 NEW_SPEED = [args.silent, args.sound]
 INPUT_FILE = args.i
 FRAME_QUALITY = args.q
+HWACCEL = args.hwaccel
 
 assert INPUT_FILE != None , "What am I supposed to do ?!"
 
@@ -68,12 +70,14 @@ OUTPUT_FILE = args.o if len(args.o) >= 1 else inputToOutputFilename(INPUT_FILE)
 
 AUDIO_FADE_ENVELOPE_SIZE = 400
     
+cmd = "ffmpeg"
+if HWACCEL != "":
+    cmd = "ffmpeg -hwaccel {}".format(HWACCEL)
 
-
-command = "ffmpeg -i '{}' -qscale:v {} TMP/%d.jpg -hide_banner".format(INPUT_FILE, FRAME_QUALITY)
+command = "{} -i '{}' -qscale:v {} TMP/%d.jpg -hide_banner".format(cmd, INPUT_FILE, FRAME_QUALITY)
 subprocess.call(command, shell=True)
 
-command = "ffmpeg -i '{}' -ab 160k -ac 2 -ar '{}' -vn TMP/audio.wav".format(INPUT_FILE, SAMPLE_RATE)
+command = "{} -i '{}' -ab 160k -ac 2 -ar '{}' -vn TMP/audio.wav".format(cmd, INPUT_FILE, SAMPLE_RATE)
 subprocess.call(command, shell=True)
 
 sampleRate, audioData = wavfile.read('TMP/audio.wav')
@@ -114,7 +118,6 @@ sFile = 'TMP/tempStart.wav'
 eFile = 'TMP/tempEnd.wav'
 for chunk in chunks:
     audioChunk = audioData[int(chunk[0]*samplesPerFrame) : int(chunk[1]*samplesPerFrame)]
-    
     wavfile.write(sFile, SAMPLE_RATE, audioChunk)
     with WavReader(sFile) as reader:
         with WavWriter(eFile, reader.channels, reader.samplerate) as writer:
@@ -136,16 +139,13 @@ for chunk in chunks:
     
     startOutputFrame = int(math.ceil(outputPointer/samplesPerFrame))
     endOutputFrame = int(math.ceil(endPointer/samplesPerFrame))
-    frameList = []
     for outputFrame in range(startOutputFrame, endOutputFrame):
         inputFrame = int(chunk[0] + NEW_SPEED[int(chunk[2])] * (outputFrame-startOutputFrame))
-        didItWork = copyFrame(inputFrame, outputFrame, frameList)
+        didItWork = copyFrame(inputFrame, outputFrame, fileFrame)
         if didItWork:
             lastExistingFrame = inputFrame
         elif lastExistingFrame != None:
-            copyFrame(lastExistingFrame, outputFrame, frameList)
-    
-    fileFrame.write(''.join(frameList))
+            copyFrame(lastExistingFrame, outputFrame, fileFrame)
     outputPointer = endPointer
 fileFrame.close()
 
@@ -160,7 +160,7 @@ except:
         except:
             wavfile.write('TMP/audioNew.wav', 32000 , outputAudioData)
 
-command = "ffmpeg -r {} -f concat -safe 0 -i fileFrame.txt -i TMP/audioNew.wav -r {} '{}'".format(frameRate, frameRate, OUTPUT_FILE)
+command = "{} -r {} -f concat -safe 0 -i fileFrame.txt -i TMP/audioNew.wav -r {} '{}'".format(cmd, frameRate, frameRate, OUTPUT_FILE)
 subprocess.call(command, shell=True)
 
 deletePath()
